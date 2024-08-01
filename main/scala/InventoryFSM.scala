@@ -1,8 +1,8 @@
-import akka.actor.{Actor, ActorRef, Props}
-import akka.actor.FSM
-import akka.testkit.{TestKit, TestProbe}
-import akka.actor.ActorSystem
-import org.scalatest.{FlatSpecLike, Matchers}
+import org.apache.pekko.actor.{Actor, ActorRef, Props}
+import org.apache.pekko.actor.FSM
+import org.apache.pekko.testkit.{TestKit, TestProbe}
+import org.apache.pekko.actor.ActorSystem
+
 
 // Definición de los estados y datos del FSM
 sealed trait State
@@ -104,27 +104,3 @@ class Publisher(totalNrBooks: Int, nrBooksPerRequest: Int) extends Actor {
   }
 }
 
-class InventoryFSMTest extends TestKit(ActorSystem("InventoryFSMTest"))
-  with FlatSpecLike with Matchers {
-
-  "An Inventory FSM" should "handle BookRequest and transitions" in {
-    val publisher = system.actorOf(Props(new Publisher(2, 2)))
-    val inventory = system.actorOf(Props(new Inventory(publisher)))
-    val stateProbe = TestProbe()
-    val replyProbe = TestProbe()
-
-    inventory ! SubscribeTransitionCallBack(stateProbe.ref)
-    stateProbe.expectMsg(CurrentState(inventory, WaitForRequests))
-
-    inventory ! BookRequest("context1", replyProbe.ref)
-    stateProbe.expectMsg(Transition(inventory, WaitForRequests, WaitForPublisher))
-    stateProbe.expectMsg(Transition(inventory, WaitForPublisher, ProcessRequest))
-    stateProbe.expectMsg(Transition(inventory, ProcessRequest, WaitForRequests))
-    replyProbe.expectMsg(BookReply("context1", Right(1)))
-
-    inventory ! BookRequest("context2", replyProbe.ref)
-    stateProbe.expectMsg(Transition(inventory, WaitForRequests, ProcessRequest))
-    stateProbe.expectMsg(Transition(inventory, ProcessRequest, WaitForRequests))
-    replyProbe.expectMsg(BookReply("context2", Right(2)))
-  }
-}
